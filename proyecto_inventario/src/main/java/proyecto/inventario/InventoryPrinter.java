@@ -19,6 +19,6 @@ public class InventoryPrinter {
   public void print() {
     List<Product> products = reader.getProducts();
     report.generateReport(products);
-    System.out.println("Generating inventory report...");
+    System.out.println("Generating inventory rt...");
   }
 }

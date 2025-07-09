@@ -1,0 +1,79 @@
+name: Continuous Integration Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  JAVA_VERSION: '17'
+  MAVEN_OPTS: '-Xmx1024m'
+
+jobs:
+  quality-check:
+    name: Code Quality & Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Retrieve source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Java Environment
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compile and execute tests
+        working-directory: ./proyecto_inventario
+        run: |
+          mvn clean compile test
+
+      - name: Package application
+        working-directory: ./proyecto_inventario
+        run: mvn package -DskipTests
+
+      - name: Code style verification
+        working-directory: ./proyecto_inventario
+        run: |
+          mvn checkstyle:checkstyle
+        continue-on-error: true
+
+      - name: Static code analysis with PMD
+        working-directory: ./proyecto_inventario
+        run: |
+          mvn pmd:check
+        continue-on-error: true
+
+      - name: Generate test coverage metrics
+        working-directory: ./proyecto_inventario
+        run: |
+          mvn jacoco:report
+
+      - name: Extract project version
+        id: version-extraction
+        working-directory: ./proyecto_inventario
+        run: |
+          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "project_version=$PROJECT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Archive build artifacts and reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: proyecto-integrador
+          path: |
+            proyecto_inventario/target/*.jar
+            proyecto_inventario/target/site/jacoco/
+            proyecto_inventario/target/site/checkstyle.html
+            proyecto_inventario/target/site/pmd.html
+            proyecto_inventario/target/site/css/
+            proyecto_inventario/target/site/images/
+          retention-days: 30
